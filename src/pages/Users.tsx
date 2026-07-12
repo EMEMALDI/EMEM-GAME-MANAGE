@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, MoreVertical, ShieldCheck, QrCode, Copy, Trash2, Edit, X, Activity } from 'lucide-react';
+import { Search, Plus, MoreVertical, ShieldCheck, QrCode, Copy, Trash2, Edit, X, Activity, Download } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
+import { QRCodeSVG } from 'qrcode.react';
+import { v4 as uuidv4 } from 'uuid';
 
 interface VPNUser {
   id: string;
@@ -26,6 +28,13 @@ export function Users() {
   const [newUserName, setNewUserName] = useState('');
   const [newUserProtocol, setNewUserProtocol] = useState('vless');
   const [newUserLimit, setNewUserLimit] = useState(0);
+
+  // Config Modal State
+  const [configModal, setConfigModal] = useState<{ open: boolean; user: VPNUser | null; configStr: string }>({
+    open: false,
+    user: null,
+    configStr: ''
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -60,6 +69,38 @@ export function Users() {
     }
   };
 
+  const renewUser = async (id: string) => {
+    try {
+      await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expire_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() })
+      });
+      fetchUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const resetTraffic = async (id: string) => {
+    try {
+      await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bandwidth_used: 0 })
+      });
+      fetchUsers();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const copySubscription = async (id: string) => {
+    const subLink = `${window.location.origin}/sub/${id}`;
+    await navigator.clipboard.writeText(subLink);
+    alert('Subscription URL copied!');
+  };
+
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -70,7 +111,7 @@ export function Users() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          id: crypto.randomUUID(),
+          id: uuidv4(),
           name: newUserName,
           bandwidth_limit: newUserLimit * 1024 * 1024 * 1024, // GB to Bytes
           protocol: newUserProtocol,
@@ -81,10 +122,55 @@ export function Users() {
         setIsAddModalOpen(false);
         setNewUserName('');
         fetchUsers();
+      } else {
+        let errorMsg = 'Unknown error';
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch {
+          errorMsg = `Server error: ${res.status} ${res.statusText}`;
+        }
+        alert('Error creating user: ' + errorMsg);
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert('Error creating user: ' + e.message);
+    }
+  };
+
+  const handleGenerateConfig = async (user: VPNUser) => {
+    try {
+      const res = await fetch(`/api/config/generate/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setConfigModal({ open: true, user, configStr: JSON.stringify(data.config, null, 2) });
+      } else {
+        alert('Failed to generate config');
       }
     } catch (e) {
       console.error(e);
+      alert('Error generating config');
     }
+  };
+
+  const copyConfig = async () => {
+    if (configModal.configStr) {
+      await navigator.clipboard.writeText(configModal.configStr);
+      alert('Config copied to clipboard!');
+    }
+  };
+
+  const downloadConfig = () => {
+    if (!configModal.configStr || !configModal.user) return;
+    const blob = new Blob([configModal.configStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `config-${configModal.user.name}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const filteredUsers = users.filter(u => 
@@ -197,16 +283,16 @@ export function Users() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Renew">
+                        <button onClick={() => renewUser(user.id)} className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Renew (+30 Days)">
                           <Plus className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors" title="Reset Traffic">
+                        <button onClick={() => resetTraffic(user.id)} className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors" title="Reset Traffic">
                           <Activity className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Copy Subscription URL">
+                        <button onClick={() => copySubscription(user.id)} className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Copy Subscription URL">
                           <Copy className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors" title="Show QR Code">
+                        <button onClick={() => handleGenerateConfig(user)} className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors" title="Create / Show Config">
                           <QrCode className="w-4 h-4" />
                         </button>
                         <button className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Edit User">
@@ -224,6 +310,59 @@ export function Users() {
           </table>
         </div>
       </div>
+
+      <AnimatePresence>
+        {configModal.open && configModal.user && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfigModal({ open: false, user: null, configStr: '' })}
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl glass-card rounded-2xl p-6 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <button 
+                onClick={() => setConfigModal({ open: false, user: null, configStr: '' })}
+                className="absolute top-4 right-4 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <h2 className="text-xl font-bold text-white mb-6">Config: {configModal.user.name}</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 overflow-hidden">
+                <div className="flex flex-col items-center justify-start bg-slate-900/50 p-6 rounded-xl border border-slate-800">
+                  <div className="bg-white p-2 rounded-lg shadow-xl mb-4">
+                    <QRCodeSVG value={configModal.configStr || "empty"} size={160} />
+                  </div>
+                  <p className="text-xs text-slate-400 text-center">Scan with V2rayNG, Shadowrocket, or Nekobox</p>
+                  
+                  <div className="w-full space-y-2 mt-6">
+                    <button onClick={copyConfig} className="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 rounded-lg transition-colors">
+                      <Copy className="w-4 h-4" /> Copy Config
+                    </button>
+                    <button onClick={downloadConfig} className="w-full flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+                      <Download className="w-4 h-4" /> Download JSON
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="md:col-span-2 overflow-y-auto bg-slate-950/50 rounded-xl border border-slate-800 p-4">
+                  <pre className="text-xs text-slate-300 font-mono whitespace-pre-wrap">
+                    {configModal.configStr}
+                  </pre>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isAddModalOpen && (

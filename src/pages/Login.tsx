@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Shield, Key, User } from 'lucide-react';
@@ -8,8 +8,14 @@ export function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { setAuth } = useAuthStore();
+  const { setAuth, token } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (token) {
+      navigate('/', { replace: true });
+    }
+  }, [token, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +25,13 @@ export function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setError(`Server error: ${res.status}`);
+        return;
+      }
       
       if (res.ok) {
         setAuth(data.token, data.user);

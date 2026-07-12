@@ -1,12 +1,47 @@
 import { useState } from 'react';
 import { Shield, Key, Smartphone, AlertTriangle, Monitor, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '../store/authStore';
+import { useNavigate } from 'react-router-dom';
 
 export function Security() {
+  const { token, user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const [username, setUsername] = useState(user?.username || 'admin');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+
   const [sessions] = useState([
     { id: '1', device: 'MacBook Pro 16"', browser: 'Chrome 122', ip: '192.168.1.1', location: 'London, UK', current: true, time: '2 mins ago' },
     { id: '2', device: 'iPhone 14 Pro', browser: 'Safari Mobile', ip: '10.0.0.5', location: 'London, UK', current: false, time: '3 hours ago' }
   ]);
+
+  const handleUpdate = async () => {
+    try {
+      const res = await fetch('/api/auth/password', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        setMessage('Credentials updated. Please log in again.');
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else {
+        setMessage('Failed to update credentials.');
+      }
+    } catch (e) {
+      console.error(e);
+      setMessage('Error updating credentials.');
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -24,14 +59,15 @@ export function Security() {
             </h2>
             
             <div className="space-y-6">
+              {message && <div className="text-emerald-400 text-sm bg-emerald-400/10 p-3 rounded-lg border border-emerald-400/20">{message}</div>}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Admin Username</label>
-                  <input type="text" defaultValue="admin" className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500/50" />
+                  <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500/50" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">New Password</label>
-                  <input type="password" placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500/50" />
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500/50" />
                 </div>
               </div>
               
@@ -48,7 +84,7 @@ export function Security() {
                 </button>
               </div>
               
-              <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-xl font-medium transition-colors shadow-lg shadow-blue-500/20">
+              <button onClick={handleUpdate} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-xl font-medium transition-colors shadow-lg shadow-blue-500/20">
                 Update Credentials
               </button>
             </div>
@@ -60,7 +96,7 @@ export function Security() {
                 <Monitor className="w-5 h-5 text-purple-400" />
                 Active Sessions
               </h2>
-              <button className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1">
+              <button onClick={handleLogout} className="text-sm text-red-400 hover:text-red-300 flex items-center gap-1">
                 <LogOut className="w-4 h-4" /> Revoke All
               </button>
             </div>

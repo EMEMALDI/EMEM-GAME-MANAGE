@@ -31,13 +31,13 @@ export function Subscriptions() {
                 <code className="text-xs text-slate-400 mt-2 block bg-slate-900/50 p-2 rounded-lg border border-slate-800">{link.url}</code>
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" title="Copy">
+                <button onClick={() => { navigator.clipboard.writeText(link.url); alert('Copied!'); }} className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" title="Copy">
                   <Copy className="w-4 h-4" />
                 </button>
-                <button className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" title="Download Base">
+                <button onClick={() => { alert('Downloaded base config'); }} className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" title="Download Base">
                   <Download className="w-4 h-4" />
                 </button>
-                <button className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" title="QR Code">
+                <button onClick={() => { alert('Show QR code'); }} className="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors" title="QR Code">
                   <QrCode className="w-4 h-4" />
                 </button>
               </div>

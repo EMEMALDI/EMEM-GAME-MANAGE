@@ -80,7 +80,7 @@ if (adminCount.count === 0) {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  const PORT = process.env.PORT || 3000;
+  const PORT = parseInt(process.env.PORT || '3000', 10);
 
   app.use(express.json());
   app.use(cors());
@@ -122,10 +122,10 @@ async function startServer() {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (token == null) return res.sendStatus(401);
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-      if (err) return res.sendStatus(403);
+      if (err) return res.status(403).json({ error: 'Forbidden' });
       req.user = user;
       next();
     });
@@ -151,6 +151,17 @@ async function startServer() {
     }
   });
 
+  app.put('/api/auth/password', authenticateToken, (req, res) => {
+    const { username, password } = req.body;
+    try {
+      const hash = bcrypt.hashSync(password, 10);
+      db.prepare('UPDATE users SET username = ?, password = ? WHERE username = ?').run(username, hash, req.user.username);
+      res.json({ success: true, message: 'Credentials updated' });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   // VPN Users CRUD
   app.get('/api/users', authenticateToken, (req, res) => {
     const users = db.prepare('SELECT * FROM vpn_users').all();
@@ -168,6 +179,30 @@ async function startServer() {
     }
   });
 
+  app.put('/api/users/:id', authenticateToken, (req, res) => {
+    const { name, bandwidth_limit, protocol, status, expire_at, bandwidth_used } = req.body;
+    try {
+      const updates = [];
+      const values = [];
+      
+      if (name !== undefined) { updates.push('name = ?'); values.push(name); }
+      if (bandwidth_limit !== undefined) { updates.push('bandwidth_limit = ?'); values.push(bandwidth_limit); }
+      if (protocol !== undefined) { updates.push('protocol = ?'); values.push(protocol); }
+      if (status !== undefined) { updates.push('status = ?'); values.push(status); }
+      if (expire_at !== undefined) { updates.push('expire_at = ?'); values.push(expire_at); }
+      if (bandwidth_used !== undefined) { updates.push('bandwidth_used = ?'); values.push(bandwidth_used); }
+      
+      if (updates.length > 0) {
+        values.push(req.params.id);
+        db.prepare(`UPDATE vpn_users SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+      }
+      
+      res.json({ success: true, message: 'User updated' });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   app.delete('/api/users/:id', authenticateToken, (req, res) => {
     try {
       db.prepare('DELETE FROM vpn_users WHERE id = ?').run(req.params.id);
@@ -177,7 +212,63 @@ async function startServer() {
     }
   });
 
+  app.get('/api/servers', authenticateToken, (req, res) => {
+    const servers = db.prepare('SELECT * FROM servers').all();
+    res.json(servers);
+  });
+
+  app.post('/api/servers', authenticateToken, (req, res) => {
+    const { id, name, country, region, provider, public_ip, protocols } = req.body;
+    try {
+      db.prepare('INSERT INTO servers (id, name, country, region, provider, public_ip, protocols) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(id, name, country, region, provider, public_ip, protocols);
+      res.json({ success: true, message: 'Server created' });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.delete('/api/servers/:id', authenticateToken, (req, res) => {
+    try {
+      db.prepare('DELETE FROM servers WHERE id = ?').run(req.params.id);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
   // Config Generation Mock
+  app.get('/api/config/generate/:id', authenticateToken, (req, res) => {
+    const user = db.prepare('SELECT * FROM vpn_users WHERE id = ?').get(req.params.id) as any;
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const config = {
+      log: { level: "info" },
+      inbounds: [{
+        type: user.protocol,
+        tag: "in-" + user.id,
+        listen: "::",
+        listen_port: 443,
+        users: [{ uuid: user.id, name: user.name }],
+        tls: {
+          enabled: true,
+          alpn: ["h2", "http/1.1"],
+          utls: { enabled: true, fingerprint: "chrome" }
+        },
+        multiplex: {
+          enabled: true,
+          padding: true
+        }
+      }],
+      outbounds: [{ type: "direct", tag: "direct" }]
+    };
+    
+    res.json({ success: true, config });
+  });
+
   app.get('/api/config/generate', authenticateToken, (req, res) => {
     const vpnUsers = db.prepare('SELECT * FROM vpn_users WHERE status = "active"').all();
     
