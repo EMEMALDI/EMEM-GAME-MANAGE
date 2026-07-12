@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  nextgen-panel:
+    build: .
+    image: nextgen-panel:latest
+    container_name: nextgen-panel
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=change-this-secret-in-production
