@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings, LogOut, Server, Shield, Activity, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Server, Shield, Activity, Menu, X, Link, Boxes, Code, FileText, DownloadCloud } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,9 +8,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 const NAV_ITEMS = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { name: 'Users', icon: Users, path: '/users' },
-  { name: 'Nodes', icon: Server, path: '/nodes' },
+  { name: 'Servers', icon: Server, path: '/servers' },
+  { name: 'Nodes', icon: Boxes, path: '/nodes' },
+  { name: 'Subscriptions', icon: Link, path: '/subscriptions' },
   { name: 'Security', icon: Shield, path: '/security' },
-  { name: 'Diagnostics', icon: Activity, path: '/diagnostics' },
+  { name: 'Monitoring', icon: Activity, path: '/monitoring' },
+  { name: 'Backups', icon: DownloadCloud, path: '/backups' },
+  { name: 'Logs', icon: FileText, path: '/logs' },
+  { name: 'Plugins', icon: Code, path: '/plugins' },
   { name: 'Settings', icon: Settings, path: '/settings' },
 ];
 
@@ -27,14 +32,14 @@ export function Layout() {
   const SidebarContent = () => (
     <>
       <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-          N
+        <div className="w-8 h-8 rounded-lg border-2 border-blue-500 bg-slate-900 flex items-center justify-center font-bold text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)] text-lg">
+          E
         </div>
-        <span className="font-bold text-xl tracking-tight text-white">NextGen</span>
+        <span className="font-bold text-xl tracking-tight text-white uppercase" style={{ textShadow: '0 0 10px rgba(255,255,255,0.2)' }}>EMEM PANEL</span>
       </div>
       
-      <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2">Menu</div>
+      <div className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">Modules</div>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.path}
@@ -86,10 +91,10 @@ export function Layout() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 glass border-b border-slate-800/50 z-30 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-            N
+          <div className="w-8 h-8 rounded-lg border-2 border-blue-500 bg-slate-900 flex items-center justify-center font-bold text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+            E
           </div>
-          <span className="font-bold text-lg tracking-tight text-white">NextGen</span>
+          <span className="font-bold text-lg tracking-tight text-white uppercase">EMEM PANEL</span>
         </div>
         <button onClick={() => setMobileOpen(true)} className="text-slate-300 p-2">
           <Menu className="w-6 h-6" />

@@ -46,11 +46,11 @@ export function Login() {
         className="w-full max-w-md glass-card p-8 rounded-3xl relative z-10"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-blue-500 flex items-center justify-center font-bold text-white shadow-[0_0_30px_rgba(59,130,246,0.4)] mb-4">
-            <Shield className="w-8 h-8" />
+          <div className="w-16 h-16 rounded-2xl border-2 border-blue-500 bg-slate-900 flex items-center justify-center font-bold text-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.4)] mb-4 text-3xl">
+            E
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">NextGen Panel</h1>
-          <p className="text-slate-400 text-sm mt-1">Sign in to manage your gaming nodes</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight uppercase" style={{ textShadow: '0 0 10px rgba(255,255,255,0.2)' }}>EMEM PANEL</h1>
+          <p className="text-slate-400 text-sm mt-1">Enterprise VPN Management</p>
         </div>
 
         {error && (

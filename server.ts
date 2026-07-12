@@ -7,32 +7,65 @@ import Database from 'better-sqlite3';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import cors from 'cors';
+import { v4 as uuidv4 } from 'uuid';
+import os from 'os';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || 'emem-super-secret-key-change-me';
+const START_TIME = Date.now();
 
 // Setup DB
 const db = new Database('data.db', { verbose: console.log });
 db.pragma('journal_mode = WAL');
 
-// Initialize schema
+// Initialize modular schema
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     role TEXT DEFAULT 'viewer',
+    two_factor_enabled BOOLEAN DEFAULT 0,
+    two_factor_secret TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
   CREATE TABLE IF NOT EXISTS vpn_users (
-    id TEXT PRIMARY KEY, -- UUID
+    id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    bandwidth_limit INTEGER DEFAULT 0, -- 0 means unlimited
+    notes TEXT,
+    tags TEXT,
+    bandwidth_limit INTEGER DEFAULT 0,
     bandwidth_used INTEGER DEFAULT 0,
     expire_at DATETIME,
     status TEXT DEFAULT 'active',
     protocol TEXT DEFAULT 'vless',
+    last_online DATETIME,
+    last_ip TEXT,
+    device_limit INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS servers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    country TEXT,
+    region TEXT,
+    provider TEXT,
+    public_ip TEXT,
+    private_ip TEXT,
+    protocols TEXT,
+    weight INTEGER DEFAULT 10,
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    user TEXT,
+    ip TEXT,
+    action TEXT,
+    result TEXT
   );
 `);
 
@@ -41,6 +74,7 @@ const adminCount = db.prepare('SELECT count(*) as count FROM users WHERE usernam
 if (adminCount.count === 0) {
   const hash = bcrypt.hashSync('admin', 10);
   db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('admin', hash, 'admin');
+  db.prepare('INSERT INTO audit_logs (user, action, result) VALUES (?, ?, ?)').run('system', 'init', 'Admin user created');
 }
 
 async function startServer() {
@@ -56,21 +90,27 @@ async function startServer() {
   
   // Real-time metrics simulation
   setInterval(() => {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const memUsage = ((totalMem - freeMem) / totalMem) * 100;
+    
     wss.clients.forEach(client => {
       if (client.readyState === 1) { // OPEN
         client.send(JSON.stringify({
           type: 'metrics',
           data: {
-            cpu: Math.random() * 100,
-            memory: Math.random() * 100,
+            cpu: Math.random() * 20 + 5, // Simulated CPU load
+            memory: memUsage,
+            disk: Math.random() * 10 + 40, // Simulated Disk
             bandwidth: {
-              up: Math.random() * 1000,
-              down: Math.random() * 5000
+              up: Math.random() * 2000,
+              down: Math.random() * 8000
             },
-            online_users: Math.floor(Math.random() * 100),
-            ping: Math.floor(Math.random() * 50) + 10,
-            jitter: Math.random() * 5,
-            packet_loss: Math.random() * 2
+            online_users: Math.floor(Math.random() * 500) + 100,
+            ping: Math.floor(Math.random() * 20) + 5,
+            jitter: Math.random() * 2,
+            packet_loss: Math.random() > 0.9 ? Math.random() : 0,
+            uptime: Math.floor((Date.now() - START_TIME) / 1000)
           }
         }));
       }
@@ -141,7 +181,7 @@ async function startServer() {
   app.get('/api/config/generate', authenticateToken, (req, res) => {
     const vpnUsers = db.prepare('SELECT * FROM vpn_users WHERE status = "active"').all();
     
-    // Simulate sing-box config generation
+    // Simulate sing-box config generation with adaptive profiles
     const config = {
       log: { level: "info" },
       inbounds: vpnUsers.map((u: any) => ({
@@ -149,7 +189,16 @@ async function startServer() {
         tag: "in-" + u.id,
         listen: "::",
         listen_port: 443,
-        users: [{ uuid: u.id, name: u.name }]
+        users: [{ uuid: u.id, name: u.name }],
+        tls: {
+          enabled: true,
+          alpn: ["h2", "http/1.1"],
+          utls: { enabled: true, fingerprint: "chrome" }
+        },
+        multiplex: {
+          enabled: true,
+          padding: true
+        }
       })),
       outbounds: [{ type: "direct", tag: "direct" }]
     };

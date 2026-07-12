@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, MoreVertical, ShieldCheck, QrCode, Copy, Trash2, Edit, X } from 'lucide-react';
+import { Search, Plus, MoreVertical, ShieldCheck, QrCode, Copy, Trash2, Edit, X, Activity } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { cn } from '../lib/utils';
 import { format } from 'date-fns';
@@ -197,6 +197,12 @@ export function Users() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Renew">
+                          <Plus className="w-4 h-4" />
+                        </button>
+                        <button className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors" title="Reset Traffic">
+                          <Activity className="w-4 h-4" />
+                        </button>
                         <button className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Copy Subscription URL">
                           <Copy className="w-4 h-4" />
                         </button>
@@ -257,17 +263,28 @@ export function Users() {
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Protocol</label>
-                  <select
-                    value={newUserProtocol}
-                    onChange={(e) => setNewUserProtocol(e.target.value)}
-                    className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none"
-                  >
-                    <option value="vless">VLESS + Reality</option>
-                    <option value="tuic">TUIC v5</option>
-                    <option value="hysteria2">Hysteria2</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Protocol</label>
+                    <select
+                      value={newUserProtocol}
+                      onChange={(e) => setNewUserProtocol(e.target.value)}
+                      className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none"
+                    >
+                      <option value="vless">VLESS + Reality</option>
+                      <option value="tuic">TUIC v5</option>
+                      <option value="hysteria2">Hysteria2</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5">Device Limit</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0 = unl"
+                      className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    />
+                  </div>
                 </div>
                 
                 <div>
@@ -277,6 +294,15 @@ export function Users() {
                     min="0"
                     value={newUserLimit}
                     onChange={(e) => setNewUserLimit(Number(e.target.value))}
+                    className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    placeholder="premium, gaming"
                     className="w-full bg-slate-900/50 border border-slate-800 text-white px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                 </div>

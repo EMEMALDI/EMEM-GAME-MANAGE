@@ -7,17 +7,19 @@ import { cn } from '../lib/utils';
 interface Metrics {
   cpu: number;
   memory: number;
+  disk: number;
   bandwidth: { up: number; down: number };
   online_users: number;
   ping: number;
   jitter: number;
   packet_loss: number;
+  uptime: number;
 }
 
 export function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics>({
-    cpu: 0, memory: 0, bandwidth: { up: 0, down: 0 },
-    online_users: 0, ping: 0, jitter: 0, packet_loss: 0
+    cpu: 0, memory: 0, disk: 0, bandwidth: { up: 0, down: 0 },
+    online_users: 0, ping: 0, jitter: 0, packet_loss: 0, uptime: 0
   });
   
   const [chartData, setChartData] = useState<any[]>([]);
@@ -46,28 +48,43 @@ export function Dashboard() {
     return () => ws.close();
   }, []);
 
+  const formatUptime = (seconds: number) => {
+    const d = Math.floor(seconds / (3600*24));
+    const h = Math.floor(seconds % (3600*24) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    return `${d}d ${h}h ${m}m`;
+  };
+
   const stats = [
     { name: 'Online Users', value: metrics.online_users.toString(), icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    { name: 'Active Nodes', value: '3', icon: Globe, color: 'text-purple-400', bg: 'bg-purple-400/10' },
     { name: 'Avg Ping', value: `${metrics.ping} ms`, icon: Activity, color: 'text-green-400', bg: 'bg-green-400/10' },
     { name: 'Packet Loss', value: `${metrics.packet_loss.toFixed(1)}%`, icon: ShieldAlert, color: metrics.packet_loss > 1 ? 'text-red-400' : 'text-emerald-400', bg: metrics.packet_loss > 1 ? 'bg-red-400/10' : 'bg-emerald-400/10' },
-    { name: 'Active Nodes', value: '3', icon: Globe, color: 'text-purple-400', bg: 'bg-purple-400/10' },
   ];
 
   const system = [
     { name: 'CPU Usage', value: metrics.cpu, icon: Cpu, color: 'text-blue-400' },
     { name: 'Memory', value: metrics.memory, icon: HardDrive, color: 'text-indigo-400' },
+    { name: 'Disk Storage', value: metrics.disk, icon: HardDrive, color: 'text-emerald-400' },
   ];
+
+  const railwayRegion = 'eu-west'; // Placeholder for railway region logic
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">System Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-1">Real-time gaming node monitoring</p>
+          <p className="text-slate-400 text-sm mt-1">Real-time enterprise monitoring</p>
         </div>
-        <div className="flex items-center gap-2 glass-card px-3 py-1.5 rounded-full border border-green-500/30">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs font-medium text-green-400">System Optimal</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 glass-card px-3 py-1.5 rounded-full border border-blue-500/30">
+            <span className="text-xs font-medium text-blue-400">Region: {railwayRegion.toUpperCase()}</span>
+          </div>
+          <div className="flex items-center gap-2 glass-card px-3 py-1.5 rounded-full border border-green-500/30">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs font-medium text-green-400">Uptime: {formatUptime(metrics.uptime)}</span>
+          </div>
         </div>
       </div>
 
