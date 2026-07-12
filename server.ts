@@ -125,7 +125,7 @@ async function startServer() {
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-      if (err) return res.status(403).json({ error: 'Forbidden' });
+      if (err) return res.status(403).json({ error: 'Forbidden: ' + err.message });
       req.user = user;
       next();
     });
@@ -295,6 +295,11 @@ async function startServer() {
     };
     
     res.json({ success: true, config });
+  });
+
+  // Catch-all for API routes
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: 'API route not found' });
   });
 
   // Vite middleware for development

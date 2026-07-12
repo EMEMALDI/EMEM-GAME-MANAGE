@@ -48,6 +48,8 @@ export function Users() {
       if (res.ok) {
         const data = await res.json();
         setUsers(data);
+      } else if (res.status === 401 || res.status === 403) {
+        useAuthStore.getState().logout();
       }
     } catch (e) {
       console.error(e);
@@ -122,6 +124,9 @@ export function Users() {
         setIsAddModalOpen(false);
         setNewUserName('');
         fetchUsers();
+      } else if (res.status === 401 || res.status === 403) {
+        useAuthStore.getState().logout();
+        alert('Session expired. Please log in again.');
       } else {
         let errorMsg = 'Unknown error';
         try {

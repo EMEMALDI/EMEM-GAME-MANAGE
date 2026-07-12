@@ -26,6 +26,8 @@ export function Servers() {
       });
       if (res.ok) {
         setServers(await res.json());
+      } else if (res.status === 401 || res.status === 403) {
+        useAuthStore.getState().logout();
       }
     } catch (e) {
       console.error(e);
